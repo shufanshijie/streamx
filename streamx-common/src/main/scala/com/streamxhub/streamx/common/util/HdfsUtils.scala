@@ -22,6 +22,7 @@ package com.streamxhub.streamx.common.util
 
 import org.apache.commons.codec.digest.DigestUtils
 import org.apache.hadoop.fs._
+import org.apache.hadoop.fs.permission.{FsAction, FsPermission}
 import org.apache.hadoop.hdfs.DistributedFileSystem
 import org.apache.hadoop.io.IOUtils
 import org.apache.hadoop.ipc.RPC
@@ -40,15 +41,29 @@ object HdfsUtils extends Logger {
 
   def mkdirs(path: String): Unit = HadoopUtils.hdfs.mkdirs(getPath(path))
 
-  def copyHdfs(src: String, dst: String, delSrc: Boolean = false, overwrite: Boolean = true): Unit =
-    FileUtil.copy(HadoopUtils.hdfs, getPath(src), HadoopUtils.hdfs, getPath(dst), delSrc, overwrite, HadoopUtils.hadoopConf)
+  def copyHdfs(src: String, dst: String, delSrc: Boolean = false, overwrite: Boolean = true): Unit = {
+    val fs: FileSystem = HadoopUtils.hdfs
+    val filePermission = new FsPermission(
+      FsAction.ALL,
+      FsAction.READ_EXECUTE,
+      FsAction.READ_EXECUTE)
+    fs.setPermission(getPath(dst), filePermission)
+    FileUtil.copy(fs, getPath(src), fs, getPath(dst), delSrc, overwrite, HadoopUtils.hadoopConf)
+  }
 
   def copyHdfsDir(src: String, dst: String, delSrc: Boolean = false, overwrite: Boolean = true): Unit = {
     list(src).foreach(x => FileUtil.copy(HadoopUtils.hdfs, x, HadoopUtils.hdfs, getPath(dst), delSrc, overwrite, HadoopUtils.hadoopConf))
   }
 
-  def upload(src: String, dst: String, delSrc: Boolean = false, overwrite: Boolean = true): Unit =
-    HadoopUtils.hdfs.copyFromLocalFile(delSrc, overwrite, getPath(src), getPath(dst))
+  def upload(src: String, dst: String, delSrc: Boolean = false, overwrite: Boolean = true): Unit = {
+    val fs: FileSystem = HadoopUtils.hdfs
+    val filePermission = new FsPermission(
+      FsAction.ALL,
+      FsAction.READ_EXECUTE,
+      FsAction.READ_EXECUTE)
+    fs.setPermission(getPath(dst), filePermission)
+    fs.copyFromLocalFile(delSrc, overwrite, getPath(src), getPath(dst))
+  }
 
   def upload2(srcs: Array[String], dst: String, delSrc: Boolean = false, overwrite: Boolean = true): Unit =
     HadoopUtils.hdfs.copyFromLocalFile(delSrc, overwrite, srcs.map(getPath), getPath(dst))
